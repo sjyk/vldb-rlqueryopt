@@ -1,7 +1,7 @@
-\section{Problem Statement}
+\section{Background}
 Consider the following query model.
 Let $\{R_1,...,R_k\}$ define a set of relations, and let $\mathcal{R} = R_1 \times ... \times R_k$ denote the cartesian product.
-We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunctive predicate $\rho_1 \wedge ... \wedge \rho_j$ where each expression $\rho$ is binary boolean function of the attributes of two relations in the set $\rho = R_i.a \{=,!=,>,<\} R_j.b)$. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
+We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunctive predicate $\rho_1 \wedge ... \wedge \rho_j$ where each expression $\rho$ is binary boolean function of the attributes of two relations in the set $\rho = R_i.a ~ \{=,!=,>,<\} ~ R_j.b) $. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
 Extending our work to consider left and right outer joins is very straight-forward but we will defer that to that to future work.
 
 \subsection{Example}
@@ -25,25 +25,25 @@ SELECT *
 In this schema, $\mathcal{R}$ denotes the set of tuples $\{(e \in Emp, p \in Pos, s \in Sal)\}$. There are two predicates $\rho_1 = Emp.rank = Pos.rank$ and $\rho_2 = Pos.code = Sal.code$, combined with a conjunction. 
 
 \subsection{Join Optimization}
-Outside of the academic literature, most commercial query processing engines can only execute ``diadic'' joins, that is, joins between two relations. In the above query, one has several possible options on how to execute that query. For example, one could execute the query as $Emp \bowtie (Sal \bowtie Pos)$. Or, one could execute the query as $Sal \bowtie (Emp \bowtie Pos)$. Enumerating all such executions grows combinatorially even if the join $\bowtie$ is symmetric and commutative.
+Outside of the academic literature, most commercial query processing engines can only execute ``dyadic'' joins, that is, joins between two relations. In the above query, one has several possible options on how to execute that query. For example, one could execute the query as $Emp \bowtie (Sal \bowtie Pos)$. Or, one could execute the query as $Sal \bowtie (Emp \bowtie Pos)$. Enumerating all such executions grows combinatorially even if the join $\bowtie$ is symmetric and commutative.
 We assume that the join operation is commutative, left associative, and right associative.
 
 \subsection{Query Graph Model}
-Enumerating the set of all possible diadic join plans can be elegantly expressed as operations on a graph.
+Enumerating the set of all possible dyadic join plans can be elegantly expressed as operations on a graph.
 
 \begin{definition}[Query Graph]
 Let $G$ define an undirected graph called the \emph{query graph}, where each relation $R$ is a vertex and each $\rho$ defines an edge between vertices. The number of connected components of $G$ are denoted by $\kappa_G$.
 \end{definition}
 
-Each possible diadic join is equivalent to a combinatorial operation called a graph contraction.
+Each possible dyadic join is equivalent to a combinatorial operation called a graph contraction.
 
 \begin{definition}[Contraction]
 Let $G = (V,E)$ be a query graph with V defining the set of relations and E defining the edges from the join predicates. A contraction $c$ is a function of the graph parametrized by a tuple of vertices $c=(v_i, v_j)$. Applying $c$ to the graph $G$ defines a new graph with the following properties: (1) $v_i$ and $v_j$ are removed from $V$, (2) a new vertex $v_{ij}$ is added to $V$, and (3) the edges of $v_{ij}$ are the union of the edges incident to $v_i$ and $v_j$. 
 \end{definition}
 
-Note that each contraction reduces the number of vertices by $1$. And, that every feasible diadic join plan can be described as a sequence of such contractions $c_1 \circ c_2 ...\circ c_{T}$ until $|V| = \kappa_G$. The number of possible contraction sequences is upper bounded by $\mathcal{O}(|V|^{|V|})$. 
+Note that each contraction reduces the number of vertices by $1$. And, that every feasible dyadic join plan can be described as a sequence of such contractions $c_1 \circ c_2 ...\circ c_{T}$ until $|V| = \kappa_G$. The number of possible contraction sequences is upper bounded by $\mathcal{O}(|V|^{|V|})$. 
 
-The sequence of contractions exactly corresponds to a diadic join plan. Going back to our running example, suppose we start with a query graph consisting of the vertices $(Emp, Pos, Sal)$. Let the first contraction be $c_1 = (Emp, Pos)$, this leads to a query graph where the new vertices are $(Emp+Pos, Sal)$. Applying the only remaining possible contraction, we arrive at a single remaining vertex $Sal+(Emp+Pos)$ corresponding to the join plan $Sal \bowtie (Emp \bowtie Pos)$. Many readers might be familiar with the popular System R algorithm for join enumeration that enumerates left-deep join plans avoiding cartesian products. The graph contraction process enumerates \emph{all} possible joins including ``bushy'' joins.
+The sequence of contractions exactly corresponds to a dyadic join plan. Going back to our running example, suppose we start with a query graph consisting of the vertices $(Emp, Pos, Sal)$. Let the first contraction be $c_1 = (Emp, Pos)$, this leads to a query graph where the new vertices are $(Emp+Pos, Sal)$. Applying the only remaining possible contraction, we arrive at a single remaining vertex $Sal+(Emp+Pos)$ corresponding to the join plan $Sal \bowtie (Emp \bowtie Pos)$. Many readers might be familiar with the popular System R algorithm for join enumeration that enumerates left-deep join plans avoiding cartesian products. The graph contraction process enumerates \emph{all} possible joins including ``bushy'' joins.
 
 \subsection{Sequential Decision Problem}
 The job of the query optimizer is to find the best possible one of these contraction sequences. It does so by having a cost model $J$ which is a function that can estimate the incremental of a particular contraction $J(c) \mapsto \mathbb{R}_+$. Thus, the optimization problem can be described as follows.
