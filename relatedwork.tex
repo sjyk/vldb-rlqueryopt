@@ -1,0 +1,43 @@
+\section{Related Work}
+Data cleaning is nearly as old as the relational model~\cite{codd1970relational}, and numerous research and  commercial systems have been proposed to improve data cleaning efficiency and accuracy (see~\cite{rahm2000data} for a survey and \Cref{s:probexpressiveness} for related systems).
+The recent advances in scalable data cleaning~\cite{wang1999sample, DBLP:journals/debu/KrishnanWFGKM015, khayyat2015bigdansing, altowim2014progressive} has revealed {\it human-time}---finding and understanding errors, formulating desired characteristics of the data, writing and debugging the cleaning pipeline, and basic software engineering---as a dominant bottleneck in the entire data cleaning process~\cite{krishnan2016hilda}.  
+\sys aims to address this bottleneck by using the quality function and transformation language as a flexible and expressive declarative interface to separate high level cleaning goals from how the goals are achieved.   
+
+%However, \emph{machine time} is only part of the story and the \emph{human time} of data cleaning is known to be significant.  \sys aims to reduce the human time in writing data cleaning scripts by allowing the data scientist to model the data at a high-level and the system searches for the appropriate low-level transformations.  
+
+%\stitle{Automatic Data Cleaning}  Automatic cleaning systems express data errors as violations of logical constraints and seek to edit the database in a way to resolve such violations.  The Chase~\cite{aho1979theory,maier1979testing} serves as the basis of 
+
+\stitle{Machine Learning in Data Cleaning} Machine learning has been widely used to improve the efficiency and/or reliability of data cleaning~\cite{DBLP:journals/pvldb/YakoutENOI11,yakout2013don,gokhale2014corleone}.
+It is commonly used to predict an appropriate replacement attribute value for dirty records~\cite{yakout2013don}.
+Increasingly, it is used in combination with crowd-sourcing to extrapolate patterns from smaller manually-cleaned samples~\cite{gokhale2014corleone,DBLP:journals/pvldb/YakoutENOI11} and to improve reliability of the automatic repairs~\cite{DBLP:journals/pvldb/YakoutENOI11}.
+Concepts such as active learning can be leveraged to learn an accurate model with a minimal number of examples~\cite{DBLP:journals/pvldb/MozafariSFJM14}.
+Recently, HoloClean~\cite{rekatsinas2017holoclean} uses probabilistic graphical models to combine multiple quality signals such as lookup tables and constraints to predict cell-level repairs.
+Although related, \sys uses machine learning to steer the search process {\it away} from low quality candidate programs, rather than to propose ideal cleaning programs.  From this perspective, \sys can be extended to leverage ideas from existing work to steer the search process {\it towards} promising programs.  
+
+% For example, Yakout et al. train a model that evaluates the likelihood of a proposed replacement value \cite{yakout2013don}.
+% Another application of machine learning is value imputation, where a missing value is predicted based on those records without missing values.
+% Machine learning is also increasingly applied to make automated repairs more reliable with human validation \cite{DBLP:journals/pvldb/YakoutENOI11}.
+% Human input is often expensive and impractical to apply to entire large datasets.
+% Machine learning can extrapolate rules from a small set of examples cleaned by a human (or humans) to uncleaned data \cite{gokhale2014corleone, DBLP:journals/pvldb/YakoutENOI11}.
+% This approach can be coupled with active learning \cite{DBLP:journals/pvldb/MozafariSFJM14} to learn an accurate model with the fewest possible number of examples.
+% Holoclean~\cite{rekatsinas2017holoclean} leverages machine learning to validate repairs with a probabilistic graphical model.
+% \sys uses machine learning in the synthesis process to prune search branches.
+
+
+\stitle{Application-Aware Cleaning}  Semantics about the downstream application can inform ways to clean the dataset ``just enough'' for the application.  
+A large body of literature addresses relational queries over databases with errors by focusing on specific classes of queries~\cite{altwaijry2015query}, leveraging constraints over the input relation~\cite{2011Bertossi}, integration with crowd-sourcing~\cite{DBLP:conf/sigmod/BergmanMNT15}.   Recent work such as ActiveClean~\cite{DBLP:journals/pvldb/KrishnanWWFG16} extend this work to downstream machine learning applications, while Scorpion~\cite{DBLP:journals/pvldb/0002M13} uses the visualization-specified errors to search for approximate deletion transformations.   In this context, \sys can embed application-specific cleaning objects can be modeled within the quality function.  For instance, our quantitative cleaning experiments (\Cref{s:expquant}) simply embeds the model training and accuracy computation in the quality function. 
+There has also been recent work on quantifying incompleteness in data quality metrics~\cite{chung2016data}.
+
+% For example, Altwaijry et al.~\cite{altwaijry2015query} describe a technique for resolving a sufficient subset of entities in a database to answer SPJ queries.
+% Bergman et al. \cite{DBLP:conf/sigmod/BergmanMNT15} proposed identifying errors in selection query results and generating crowd-scoured queries to determine fixes to the base data.
+% Similarly, work on the consistent query answering problem explored the minimal effort needed to answer a query given a set of integrity constraints over a dirty relation~\cite{2011Bertossi}.
+% While the work on relational queries is extensive, analytical queries (aggregates, advanced statistical analytics, learning etc.) is less studied.
+% Projects like ActiveClean~\cite{DBLP:journals/pvldb/KrishnanWWFG16} have studied algorithms for prioritizing user-defined cleaning using the downstream ML model.
+% \sys is a flexible framework where such cleaning objectives can be modeled easily as different quality functions.
+
+% There is a growing body of literature that studies analysis-driven data cleaning, that is, applying data cleaning in a sufficient way to answer a given query (defining quality flexibly as the accuracy of the query result).
+
+\stitle{Generating Cleaning Programs} A composable data cleaning language is the building block for systems like \sys that generate understandable cleaning programs.   Languages for data transformations have been well-studied, and include seminal works by Raman and Hellerstein~\cite{raman2001potter} for schema transformations and Galhardas et al.~\cite{DBLP:conf/vldb/GalhardasFSSS01} for declarative data cleaning. These ideas were later extended in the Wisteria project~\cite{DBLP:journals/pvldb/HaasKWF015} to parametrize the transformations to allow for learning and crowdsourcing.   Wrangler~\cite{wrangler} and Foofah~\cite{jin2017foofah} are text extraction and transformation systems that similarly formulate their problems as search over a language of text transformations, and develop specialized pruning rules to reduce the search space.   These can be viewed as special cases of \sys.
+
+
+

@@ -1,0 +1,22 @@
+\section{Conclusion and Future Work}
+In summary, \sys poses data cleaning as a planning problem over a language of data transformations, and presents existing error-specific approaches---constraint-based, statistical, and demonstration-based data cleaning---within a single framework.
+Contrary to prevailing wisdom, our experiments on 8 diverse datasets suggest that this general framework can still exploit problem-specific structure to achieve parity with specialized solutions in terms of cleaning accuracy, use pruning and parallelization to run comparably to specialized solutions, yet maintain the flexibility to clean datasets that span error class.       
+Because the output is a cleaning program rather than a cleaned dataset, we are able to evaluate the cleaning results in terms of overfitting and generalization, and show how the high-level interface allows the user to easily control overfitting by tuning the quality function and language expressiveness.  
+
+Although our results suggest that borrowing from recent advances in planning and optimization is a fruitful direction, the results are counter-intuitive and raise a number of questions about future opportunities in data cleaning.  Does \sys achieve comparable and higher accuracy than specialized systems because the systems are designed for worst-case scenarios that are not present in most datasets?  Or are the benchmarks we borrowed and compared against too simple and amenable to greedy brute-force search?  
+These are all possible explanations for our results, which are still somewhat counter-intuitive to us.
+We hope to really characterize and understand these tradeoffs in the future.
+
+Finally, we are excited to extend \sys towards a more flexible and usable data cleaning system.  In particular, data cleaning is inherently a visual and interactive process, and we plan to integrate \sys with a data visualization interface.   Users can visually manipulate and examine their dataset and the system can translate interactive manipulations into quality functions.  This will also require work to characterize failure modes and provide high level tools to debug such cases.  We are also hopeful that the compact codebase (<200LOC for the core search and learning algorithms) can enable more rapid development of specialized data cleaning systems for novel domains and error conditions.  
+
+
+
+% The prevailing wisdom in the design of data cleaning algorithms is to exploit the details of specific problem rather than considering the most general cases, and our experiments suggest that this a general framework like \sys can achieve parity in terms of accuracy.
+% While the serial implementation of \sys can be much slower than the competitor specialized frameworks, \sys can be efficiently distributed to significantly reduce the gap.
+% 
+% These results should be considered a proof-of-concept that such a data cleaning \sys can be built around the recent results in AI. 
+% However, to us, these results are still counter-intuitive, and raise a number of speculative questions for the future: (1) are specialized systems overly engineered for worst-case guarantees and perhaps real-datasets are not that pathalogical, (2) maybe the benchmarks that we consider in data cleaning are too easy to brute-force, (3) what are the failure modes and corner cases of \sys in real data.
+% We hope to consider these problems in future work, as well as extending the system to novel settings.
+% In particular, we are interested in \sys as a middleware layer for data visualization.
+% A user can manipulate data in a visual UI and these manipulations can be translated into a quality function.
+% 

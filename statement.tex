@@ -1,0 +1,98 @@
+\section{Synthesis Problem}
+In this section, we describe the basic notation and problems addressed in this paper.
+
+\subsection{Basic Notation}
+
+\vspace{0.5em} \noindent \textbf{Transformations and Libraries: }
+Let $R$ be a relation over a set of attributes $A$, and let $\mathcal{R}$ denote the set of all possible relations over $A$.
+A data transformation is an operator over $\mathcal{R}$: 
+\[T: \mathcal{R} \mapsto  \mathcal{R}\]
+A library $L$ is a set of transformations, equipped with a binary operator denoting composition $T_1 \circ T_2 := T_1(T_2(R))$.
+$L$ is a finite generating set of a universe $\mathcal{U}$, or the monoid of all transformations that can be constructed from compositions from the library.
+The description length of a transformation $T \in \mathcal{U}$ (denoted by $\|T\|$) is the minimum number of compositions of library elements to generate $T$. 
+\emph{We assume that data transformations are deterministic, do not change the cardinality of the relation, and assume perfect provenance.}
+
+\begin{example}
+Consider the example table below. An example of a transformation is the find-and-replace operator over the \textsf{city\_name} column, that is, find all cells that match some literal \texttt{x} and replace that cell with \texttt{y}. There are 6 possible find-and-replace transformations: Fr('San Francisco', 'New York'), Fr('New York City', 'New York'), Fr('New York', 'San Francisco'), Fr('New York City', 'San Francisco') ,Fr('San Francisco', 'New York City'), Fr('San Francisco', 'New York City'), which defines a library. The universe is every transformation that can be created from a sequence of find-and-replace operations.
+\end{example}
+
+\begin{table}[ht!]
+\centering
+\label{my-label}
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor[HTML]{000000} 
+& {\color[HTML]{FFFFFF} city\_name}            & {\color[HTML]{FFFFFF} city\_code}   \\ \hline
+1 & San Francisco                                & SF                                  \\ \hline
+2& {\color[HTML]{FE0000} \textbf{New York}}     & NY                                  \\ \hline
+3 & New York City                                & NY \\
+\hline
+\end{tabular}
+\end{table}
+
+\vspace{0.5em} \noindent \textbf{Quality Functions: } A quality function $Q$ maps every tuple $r \in R$ to an $|A|$ dimensional vector $[0,1]^{|A|}$, a value exactly equal to zero implies the cell is clean and a value greater than 0 describes the degree of dirtiness. We denote the aggregate sum of all quality values as: \[ \bar{Q} = \sum_{r \in R} \sum_{a \in A} Q(r)[a]\]
+
+\begin{example}
+Consider the example table below. Let $C$ be the set of cells that violate $\textsf{city\_name} \rightarrow \textsf{city\_code}$ and $\textsf{city\_code} \rightarrow \textsf{city\_name}$.
+An example of a quality function is a function that maps every cell $c \in C$ to 1 and 0 other wise.
+\end{example}
+
+\begin{table}[ht!]
+\centering
+\label{my-label}
+\begin{tabular}{|l|l|l|}
+\hline
+\rowcolor[HTML]{000000} 
+& {\color[HTML]{FFFFFF} city\_name}            & {\color[HTML]{FFFFFF} city\_code}   \\ \hline
+1 & San Francisco                                & SF                                  \\ \hline
+2& {\color[HTML]{FE0000} \textbf{New York}}     & {\color[HTML]{FE0000} \textbf{NY}}                                  \\ \hline
+3 & {\color[HTML]{FE0000} \textbf{New York City}}                              & {\color[HTML]{FE0000} \textbf{NY}} \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\begin{example}
+The quality function can also model numerical data. 
+Consider data is that mostly Gaussian except for a few outliers. We can score each value by the number of standard deviations from the mean normalized the maximum deviation.
+\end{example}
+
+\subsection{Problem Statement}
+The first problem addressed in \sys is the synthesis problem.
+
+\begin{problem}[SYNTH(Q,R,L)]
+Given a quality function $Q$, a relation $R$, and a library $L$, find a transformation $u$ of description length at most $k$ composed from the library that optimizes the quality function.
+\[
+u^* = \min_{u \in \mathcal{U}} \bar{Q}( u(R) )
+\]
+\[
+\text{subject to: } \|u\| = k
+\]
+\end{problem}
+
+\vspace{0.25em} \noindent\textbf{Complexity: } The synthesis problem is extremely general, and it is not our intention to directly solve this problem in full generality.
+In fact, we can show that it is APX-Hard--that is, unless P=NP there does not exist a polynomial time approximation scheme.
+However, we find that this optimization problem is a good starting point and an analysis of the complexity illustrates a number of important structural features of the problem.
+
+\begin{proposition}
+\textsf{SYNTH(Q,R,L)} is \textsf{APX-Hard}
+\end{proposition}
+\begin{proof}[Sketch]
+Let $R$ be a single-attribute relation of Booleans. Let $L$ be the set of all assignments to a single value.
+Given a list of $N$ Boolean clauses over all the boolean variables, let $Q$ assign to each record one minus the fraction of clauses that evaluate to true. This formulation is equivalent to MAX-SAT and solution to the optimization problem.
+\end{proof}
+
+
+\vspace{0.25em} \noindent\textbf{Remarks: } This reduction gives us some insight into what makes this problem computationally hard, and why practical data cleaning problems may not have those features. \emph{(1)} Arbitrary constraint satisfaction problems are challenging because all variables can interact. While this is certainly the case for arbitrary quality functions, in many cases, data errors are localized. For example, replacing \texttt{San Francisc} with \texttt{San Francisco} has no effect on the records referring to \texttt{New York City}.  \emph{(2)} Arbitrary constraint satisfaction involves assignments to all variables. On the other hand, in data cleaning, hopefully the majority of records in a dataset are clean so there is a structure that can be exploited.
+ \emph{(3)} Constraint satisfaction does not model context, each variable is simply a Boolean value. In data cleaning, we can pragmatically exploit similarity. Similar records should be cleaned in similar ways.  
+
+\subsection{Solution Overview}
+We exploit these insights to develop a solution framework. The meta-algorithm is a greedy best-first tree search that maintains a size-limited frontier (i.e., it only expands nodes that are within a factor $\gamma$ of the current best solution).
+We additionally hash intermediate results to remove search branches that lead to identical results and merge branches that have non-conflicting transformations that both lead to improved quality.
+
+The tree-search is applied to limited blocks of data--over which it is computationally feasible. The blocking rules inferred from the quality specification or provided by the user as hints.
+This synthesizes a local sequence of transformations for a small amount of data.
+As the system applies the search to more and more blocks of data it builds a machine learning model of which transformations are likely to be included in the program.
+Consider the set of transformations in Example 1. One could potentially learn that the only select transformations are ones where the edit distance between the two string parameters is small--pruning all transformations that map San Francisco-like strings to New York-like strings.
+
+

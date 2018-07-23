@@ -1,0 +1,32 @@
+\section{Reduction factor learning}
+
+Classical approaches to reduction factor estimation include (1) histograms and
+heuristics-based analytical formulae, and (2) applying the predicate under
+estimation to sampled data, among others.  In this section we explore the use of
+learning in reduction factor estimation.  We train a neural network to learn the
+underlying data distributions of a pre-generated database, and evaluate the
+network on unseen, randomly selections that query the same database.
+
+To gather training data, we randomly generate a database of several relations,
+as well as random queries each consisting of one predicate of the form ``R.attr
+$\langle$op$\rangle$ literal''.  For numeric columns, the operands are $\{=,
+\neq, >, \geq, <, \leq\}$, whereas for string columns we restrict them to
+equality and inequalities.  Each attribute's values are drawn from a weighted
+Gaussian.
+
+To featurize each selection, we similarly use 1-hot encodings of the participant
+attribute and of the operand.  Numeric literals are then directly included in
+the feature vector, whereas for strings, we embed ``hash(string\_literal) \% B''
+where $B$ is a parameter controlling the number of hash buckets.  The labels are
+the true reduction factors by executing the queries on the generated database.
+
+A fully-connected neural network is used\footnote{Two hidden layers, 256 units
+each, with ReLU activation.}, which is trained by stochastic gradient descent.
+
+{\bf Evaluation.}  We compare the neural net to a simple linear regressor.  We
+train on a database of 5 relations, a total of 21 attributes; the train and test
+sets include 1000 and 2000 queries, respectively. We found that the fitted
+linear regressor has a mean-squared-error of $\approx 84$, while the neural
+network is able to achieve an L1 loss of $< 1$, approximating the true reduction
+factors with minimal error.  \reminder {TODO(zongheng): they need to be on the
+same scale. }
