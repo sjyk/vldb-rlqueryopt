@@ -4,7 +4,7 @@ First, we will introduce the algorithmic connection between Reinforcement Learni
 \subsection{Query Model}
 Consider the following query model.
 Let $\{R_1,...,R_T\}$ define a set of relations, and let $\mathcal{R} = R_1 \times ... \times R_T$ denote the cartesian product.
-We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunctive predicate $\rho_1 \wedge ... \wedge \rho_j$ where each expression $\rho$ is binary boolean function of the attributes of two relations in the set $\rho = R_i.a \{=,!=,>,<\} R_j.b)$. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
+We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunction of equality predicates. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
 We further assume that the join operation is commutative, left associative, and right associative.
 Extending our work to consider left and right outer joins is very straight-forward but we will defer that to that to future work.
 
@@ -114,17 +114,16 @@ The objective of the planning problem is to find a policy, which is a map from a
 
 In the popular Q-Learning approach~\cite{sutton1998reinforcement}, the algorithm enumerates random samples of decision sequences containing $(G,c, runtime, G')$ tuples forming a trajectory. From these tuples, one can calculate the following value:
 \[
-y_i = runtime + \arg \max_{u} Q_\theta(G',c)
+y_i = J(c) + \arg \max_{c'} Q_\theta(G',c')
 \]
 Each of the $y_i$ can be used to define a loss function since if $Q$ were the true Q function, then the following recurrence would hold:
 \[
-Q(G,c) = runtime + \arg \max_{u} Q_\theta(G',c)
+Q(G,c) = J(c) + + \arg \max_{c'} Q_\theta(G',c')
 \]
 So, Q-Learning defines a loss:
 \[
 L(Q) = \sum_{i} \|y_i - Q_\theta(G',c)\|_2^2
 \]
-
 This loss can be optimized with gradient descent.
 This algorithm is called the Deep Q Network algorithm~\cite{mnih2015human} and was used to learn how to autonomously play Atari Games.
 The key implication is that the neural network allows for some ability for the optimizer to extroplate the cost-to-go even for plans that are not enumerated. This means that if the featurization $f_G$ and $f_c$ are designed in a sufficiently general way, then the neural network can represent cost-to-go estimates across an entire workload--not just a single planning instance.

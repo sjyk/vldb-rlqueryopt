@@ -1,0 +1,61 @@
+\section{Experiments}
+Leis et al. recently argued for improved benchmarks for evaluating join ordering algorithms, and proposed the ``Join Order Benchmark'' (JOB)~\cite{leis2015good}.
+This benchmark is derived from the Internet Movie Data Base
+(IMDB). It contains information
+about movies and related facts about actors, directors,
+production companies, etc. 
+The dataset is 3.6 GB large and consists of 21 relational tables.
+The largest table has
+36 M rows.
+The benchmark contains 33 queries which have between 3 and 16 joins, with an average of 8 joins per query. 
+We evaluate \sys on this benchmark in terms of planning latency and plan cost.
+
+
+\subsection{JOB Cost Models}
+As a secondary contribution of this paper, we find that the particular choice of cost model and physical design greatly affects results.
+The same query with different cost models can lead to different top-performing heuristics.
+Crucially, we find that many heuristics are sensitive to non-linearities.
+
+The cost model described in~\cite{leis2015good} is inspired by an in-memory system. The cost of a hash join is linear in the size of the input relations, and the cost of a index join is essentially the cost of streaming the left side of the join.
+This cost model greatly rewards index-usage (by convention the right relation is used for index lookup), and left-deep strategies are very strong in this setting. In fact, the authors quote: 
+\begin{quote}
+\emph{``The bad performance of right-deep trees is caused by the large intermediate hash tables that need to be created from each base relation and the fact that only the bottom-most join can
+be done via index lookup.''}~\cite{leis2015good} 
+\end{quote}
+The conclusion is that the marginal benefit of bushy plans is small compared to the additional search costs.
+We argue that this is a consequence of the cost model and physical design and this led us to explore alternative cost models where the left-deep heuristic might fail.
+
+\vspace{0.25em} \noindent \textbf{CM1: } In the first cost model (inspired by~\cite{leis2015good}), we model a main-memory database that performs two types of joins: index nested-loop joins and in-memory hash joins. Let $O_l$ be the left operator and $O_r$ be the right operator the costs are defined as follows:
+\[
+\textsf{c}_{inlj} = \textsf{c}(O_l) + \textsf{rf}(O_l, O_r) \cdot |O_l|
+\]
+\[
+\textsf{c}_{hj} = \textsf{c}(O_l) + \textsf{c}(O_r)
+\]
+where \textsf{c} denotes the cost estimation function and \textsf{rf} denotes the estimated reduction factor of the join.
+As we can see, this model favors index-based joins when available. 
+The reduction factor $\textsf{rf}(O_l, O_r)$ is always less than 1.
+More importantly, this cost model is a justification for the use of left-deep plans.
+In $\textsf{c}_{inlj}$, the right operator does not incur a scan cost.
+A left deep tree where the indexed relations are on the right exploits this structure.
+
+
+\vspace{0.25em} \noindent \textbf{CM2: } In the next cost model, we model a database that accounts for disk-memory relationships in the hash joins. We designate the left operator as the ``build'' operator and the right operator as the ``probe'' operator. 
+If the previous join has already built a hash table on an attribute of interest, then the hash join does not incur another cost.
+\[
+\textsf{c}_{nobuild} = \textsf{c}(O_r)
+\]
+This model favors right-deep plans where to maximize the reuse of the built hash tables.
+
+
+\vspace{0.25em} \noindent \textbf{CM3: } Finally, in the next cost model, we model temporary tables and memory capacity constraints. There is a budget of tuples that can fit in memory and an additional physical operator that allows for materialization of a join result if memory exists. Then, the downstream cost of reading from a materialized operator is 0.   
+\[
+\textsf{c}(O) = 0 \text{ if materialized}
+\]
+This model requires bushy plans due to the inherent non-linearity of the cost function and memory constraints. 
+The cost model encourages plans that group tables together in ways that the join output can fit in the available memory.
+
+\subsection{Experiment 1. Optimizer Optimality}
+
+
+

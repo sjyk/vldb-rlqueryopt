@@ -1,25 +1,40 @@
 \section{Optimizer Architecture}
-In the previous section, we described the join enumeration algorithm. Now, we contextualize the enumeration algorithm in a more fully featured optimization stack. In particular, there are aspects of the featurization and graph definitions that have to change based on the nature of the queries.
+We call this new join optimization algorithm \sys, and describe how it fits into a query optimization stack. 
 
-\subsection{Selections and Projections}
-To handle single relation selections and projections in the query, we have to tweak the feature representation. This is because upstream selections and projections will change the cost properties of downstream joins. As in the classical optimizers, we eagerly apply selections and projections to each relation. 
+\subsection{API}
+\sys optimizes Select-Project-Join (SPJ) blocks of SQL queries. To plug \sys into a query optimizer here are the API hooks that we require implemented:
 
-This means that each relation in the query graph potentially a different number of attributes and a different cardinality than the base relation. While the proposed featurization does capture the visible attributes, it does not capture changes in cardinality due to upstream selections. 
+\vspace{0.5em}
+\begin{lstlisting}
+sample(): List<Queries> 
+\end{lstlisting}
+\noindent A function that returns a list of training queries of interest.
 
-Here, we leverage the table statistics present in most RDBMS. For each relation in the query graph, we can estimate a reduction factor $\delta_{r}$, which is an estimate of the fraction of tuples present after applying the selection to relation $r$. 
-In the featurization described in the previous section, we have a set of binary features $V_{rel}$ that describe the participating attributes.
-We multiply the reduction factors $\delta_r$ for each table with the features corresponding to attributes derived from that relation.
+\vspace{0.5em}
+\begin{lstlisting}
+train(query): List<Graph,Join,Graph',Cost> 
+\end{lstlisting}
+\noindent A function that given a query returns a list of join actions and their resultant costs. 
 
-\subsection{Physical Operator Selection}
-To add support for an optimizer that selects physical operators, we simply have to add ``labeled'' contractions, where certain physical operators are eligible. Suppose we have a set of possible physical operators, e.g., \textsf{nestedLoop}, \textsf{sortMerge}, \textsf{indexLoop}. We would simply add an additional feature to the Q-Function that captures which physical operator is selected.
+\vspace{0.5em}
+\begin{lstlisting}
+selectivity(predicate): Double
+\end{lstlisting}
+\noindent A function that returns the reduction factor of a particular single table predicate.
 
-\subsection{Indexes and Sort Orders}
+\vspace{0.5em}
+Given these three functions, \sys can plug in to any system. It takes as input an SPJ block and outputs an optimized logical and physical join plan. 
+Our prototype implementation is built on Apache Calcite.
+The system connects to various database engines through a JDBC connector and has a internal simulator to model different physical design choices.
+
+\subsection{Architectural Implications}
+\textbf{TODO: Joe wanted to write something here}
 
 
-\subsection{Summary and System Architecture}
-Surprisingly, we found that we could build a relatively full featured query optimizer based on a Deep RL join enumeration strategy.
-Our system, called \qsys, is built on Apache Calcite.
-The system connects to various database engines through a JDBC connector. It executes logically optimized queries by re-writing SQL expressions and setting hints.
-The system parses standard SQL and the learning steps are implemented using \textsf{DL4J}.
-The optimizer has two modes, training and execution. In the training mode, the optimizer will collect data and based on a user set parameter execute suboptimal plans. In the execution mode, the optimizer will leverage the trained model to improve its optimizer performance.
+\subsection{Limitations}
+This work is meant to be an initial study of Deep Reinforcement Learning in the context of join optimization. There are a number of features expected of join optimizers that are not yet supported. We plan to add such support in future work but felt it was out of scope of this paper.
+
+ \vspace{0.5em} \noindent \textbf{Sort Orders: } We do not consider cost models for sorting, sort-merge joins, or interesting orders. Keeping track of interesting sort orders in subplans is actually not difficult in our framework. They can be tracked as a set of additional features. 
+
+\vspace{0.5em} \noindent  \textbf{Outer Joins/Inequality Joins: } We currently only consider optimization of inner joins and conjunctions of join conditions.
 

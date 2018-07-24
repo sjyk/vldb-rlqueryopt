@@ -1,1 +1,16 @@
 \section{Conclusion and Future Work}
+Even today many database systems favor ``exact'' solutions when the number of relations are small but switch to approximations after a certain point.
+For example, PostgreSQL uses dynamic programming when the query has less than 12 relations and
+then switches to a genetic algorithm for larger queries. 
+Similarly, IBM DB2 uses dynamic programming and switches to a greedy strategy when the number of relations grows.
+The algorithmic connection between reinforcement learning and classical join optimization algorithms can provide a new perspective on join optimization.
+The Deep Q Network (DQN) algorithm is, in essence, a approximate dynamic programming algorithm.
+Instead of exactly memoizing subplans in a table with cost-to-go estimates as in dynamic programming, DQN represents this table with a neural network of a fixed size.
+This allows the algorithm to ``estimate'' the cost-to-go of subplans even if they have not been previously enumerated.
+
+Experimentally, we find that even with a modest number of training queries, this algorithm can match the performance of specialized heuristics.
+From a Software Engineering perspective, this unification allows the research community to develop a small number of optimized libraries  rather each domain designing/maintaining problem-specific heuristics.
+This work is a first step and there are a number of important directions for future work.
+\textbf{TODO}
+
+
