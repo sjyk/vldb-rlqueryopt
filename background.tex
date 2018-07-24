@@ -2,14 +2,19 @@
 First, we will introduce the algorithmic connection between Reinforcement Learning and the join optimization problem.
 
 \subsection{Query Model}
-Consider the following query model.
-Let $\{R_1,...,R_T\}$ define a set of relations, and let $\mathcal{R} = R_1 \times ... \times R_T$ denote the cartesian product.
-We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunction of equality predicates. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
-\jmh{The following sentence is implicit in the definition of cartesian product and selection.} We further assume that the join operation is commutative, left associative, and right associative.
-\jmh{The ``very straight-forward'' statement is a bit unnerving, especially after the assertion about commutativity and associativity, which outer joins don't promise. Maybe a forward ref here to an ``extensions'' discussion later in the paper, where you address expanding the search space to handle outer joins.a}
-Extending our work to consider left and right outer joins is very straight-forward but we will defer that to that to future work.
-
-We will use the following database of three relations denoting employee salaries as a running example throughout the paper:
+\noindent We consider the ordering of inner join queries of the form:
+\begin{lstlisting}
+SELECT <attrs>
+  FROM R1,...,Rk
+  WHERE < join condition 1 > AND
+        ...
+        < join condition k > AND
+       
+        < single pred 1 >   AND
+        ...
+        < single pred N >;
+\end{lstlisting}
+We will use the following database of three relations denoting employee salries as a running example throughout the paper:
 \[
 \text{Emp}(id, name, rank)
 \]
@@ -105,7 +110,9 @@ As the algorithm enumerates more subplans, if a particular relation set exists i
 \begin{lstlisting}
 HashMap<(Set<Relation>, Plan), Long> bestQJoins;
 \end{lstlisting}
-As the algorithm enumerates more plans, the algorithm puts enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace all child plans \jmh{what is the child-parent relationship here?} with the \emph{cost of the parent} if lower. Once this table is constructed, backtracking can be used to retrieve an optimal plan. \jmh{Give a simple exmaple.  Also signpost this flow of discussion better---help explain why you are doing this here.}
+
+As the algorithm enumerates more plans, the algorithm put enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace the \emph{cost} of a child plan with the \emph{cost of the lowest parent}. Once this table is constructed, backtracking can be used to retrieve an optimal plan. 
+%As the algorithm enumerates more plans, the algorithm puts enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace all child plans \jmh{what is the child-parent relationship here?} with the \emph{cost of the parent} if lower. Once this table is constructed, backtracking can be used to retrieve an optimal plan. \jmh{Give a simple exmaple.  Also signpost this flow of discussion better---help explain why you are doing this here.}
 
 \subsection{Learning the Q-Function}
 This change \jmh{what change?} would be a less efficient implementation in classical dynamic programming, but it crucially allows us to setup a machine learning problem. 

@@ -37,7 +37,7 @@ As we can see, this model favors index-based joins when available.
 The reduction factor $\textsf{rf}(O_l, O_r)$ is always less than 1.
 More importantly, this cost model is a justification for the use of left-deep plans.
 In $\textsf{c}_{inlj}$, the right operator does not incur a scan cost.
-A left deep tree where the indexed relations are on the right exploits this structure.
+A left deep tree where the indexed relations are on the right exploits this structure. We include primary key and foreign indexes on all relations.
 
 
 \vspace{0.25em} \noindent \textbf{CM2: } In the next cost model, we model a database that accounts for disk-memory relationships in the hash joins. We designate the left operator as the ``build'' operator and the right operator as the ``probe'' operator. 
@@ -55,7 +55,143 @@ This model favors right-deep plans where to maximize the reuse of the built hash
 This model requires bushy plans due to the inherent non-linearity of the cost function and memory constraints. 
 The cost model encourages plans that group tables together in ways that the join output can fit in the available memory.
 
-\subsection{Experiment 1. Optimizer Optimality}
+\vspace{0.5em} In our implementation of these cost models, we use \emph{true} cardinalities on single table predicates and two-way joins of base relations. We leverage standard independence assumptions to construct more complicated cardinality estimates. The goal of this work is to evaluate the join ordering process independent of the strength or weakness of the underlying cardinality estimation. 
+
+\subsection{Baseline Algorithms}
+We consider the following baseline algorithms. These algorithms are not meant to be a comprehensive list of heuristics but rather representative of a class of solutions.
+
+\begin{enumerate}
+    \item Exhaustive (\textbf{EX}): This is a dynamic program that exhaustively enumerates all join plans avoiding cartesian products.
+    \item Left-Deep (\textbf{LD}): This is a dynamic program that exhaustively enumerates all left-deep join plans.
+    \item Right-Deep (\textbf{RD}): This is a dynamic program that exhaustively enumerates all right-deep join plans.
+    \item Zig-Zag (\textbf{ZZ}): This is a dynamic program that exhaustively enumerates all zig-zag trees that is every join has at least one base relation (either on the left or the right).
+    \item IK-KBZ (\textbf{KBZ}): This algorithm is a polynomial time approximation that decomposes the query graph into chains and orders the chains based on a linear approximation.
+    \item QuickPick-1000 (\textbf{QP}): This algorithm randomly selects 1000 joins and returns the best of them. 1000 was selected to be roughly equivalent to the planning latency of \sys.
+\end{enumerate}
+
+\subsection{Optimizer Cost}
+In the first experiment, we evaluate all of the baseline algorithms against \sys in terms of final optimization cost. All of the algorithms consider join ordering without cartesian products, so \textbf{EX} is a baseline optimal solution. We report results in terms of the suboptimality w.r.t \textbf{EX}.
+
+\subsubsection{Without Single Table Selections}
+We first evaluate consider the 33 join order benchmark query templates without single table selections. We train on 26 queries and test on 7 held out queries. We report results averaged over 5-fold cross-validation (so all of the reported numbers are when the query is not seen during training). We report the min, mean, and max cost relative to the baseline.  For randomized algorithms the max range of performance (as a multiplicative factor) over 5 trials.
+
+In the first experiment, we consider CM1. This is an idealized model that heavily encourages index usage. All of the optimal plans for this workload are left-deep. Predictably, right-deep plans perform very poorly. \sys significantly out performs the heuristic solutions \textbf{KBZ} and \textbf{QP}. \sys is also far more reliable in terms worst case performance. 
+
+\begin{table}[ht!]\centering \small
+\caption{CM1 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf QP}  & 1.0  & 23.87 & 405.04 & 2.11x      \\ \hline
+{\bf KBZ} & 1.0  & 3.45  & 36.78  & -         \\ \hline
+{\bf RD}  & 4.70 & 53.25 & 683.35 & -         \\ \hline
+{\bf LD}  & 1.0  & 1.0   & 1.0    &           \\ \hline
+{\bf ZZ}  & 1.0  & 1.0   & 1.0    & -         \\ \hline
+{\bf EX}  & 1.0  & 1.0   & 1.0    & -         \\ \hline
+\hline
+{\bf DQ}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
+\end{tabular}
+\end{table}
+
+By simply changing the cost model, we can force exactly the opposite heuristic to perform well. When we evaluate CM2, which accounts for reuse of hash tables, right-deep plans are no longer so poor. In this cost model, none of the heuristics match the exhaustive search over the entire workload. \sys comes close and it is actually significantly better than zig-zag enumeration for this cost model.
+
+\begin{table}[ht!]\centering \small
+\caption{CM2 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf QP}  & 1.43  & 16.74 & 211.13 & 1.71x      \\ \hline
+{\bf KBZ} & 2.21  & 14.61  & 96.14  & -         \\ \hline
+{\bf RD}  & 1.83 & 4.25 & 69.15 & -         \\ \hline
+{\bf LD}  & 1.35  & 5.21   & 55.45    &           \\ \hline
+{\bf ZZ}  & 1.0  & 3.41   & 23.13    & -         \\ \hline
+{\bf EX}  & 1.0  & 1.0   & 1.0    & -         \\ \hline
+\hline
+{\bf DQ}  & 1.0  & 1.91   & 13.14    & 1.43x\\ \hline
+\end{tabular}
+\end{table}
+
+CM3 is meant to illustrate a cost-model where no heuristic performs well. We count the number of tuples materialized and to benfit from the materialization these tuples must fit into memory. This leads to a ``packing'' like optimization problem where the exact join order also depends on how well the intermediate results can be packed into memory. \sys is still performant in this setting as it adapts to the properties of the workload.
+
+\begin{table}[ht!]\centering \small
+\caption{CM3 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf QP}  & 1.78  & 46.19 & 489.13 & 3.44x      \\ \hline
+{\bf KBZ} & 1.21  & 56.44  & 296.14  & -         \\ \hline
+{\bf RD}  & 4.41 & 87.25 & 369.97 & -         \\ \hline
+{\bf LD}  & 1.21  & 49.32   & 255.60    &           \\ \hline
+{\bf ZZ}  & 1.16  & 21.44   & 243.16    & -         \\ \hline
+{\bf EX}  & 1.0  & 1.0   & 1.0    & -         \\ \hline
+\hline
+{\bf DQ}  & 1.0  & 3.76   & 113.89    & 2.51x\\ \hline
+\end{tabular}
+\end{table}
+
+\vspace{0.5em}\noindent \textbf{Summary and Caveats: }  We showed that heuristics are often myopic and can perform very poorly when the problem structure changes. A learning-based approach can adapt to the different scenarios at the cost of training data. As a caveat, we used idealized cost models with true cardinality values to evaluate the performance of different optimization and pruning heuristics. The experiment is meant to illustrate the mathematical structure of the optimization problem and does not make a claim about execution performance or plan variance.
+
+\subsubsection{With Single Table Selections}
+Next, we show the performance of \sys on the 113 JOB queries when we include single table selections. The point of this experiment is to illustrate an interesting difference between learning-based and enumeration-based optimization. When true cardinalities are available, single table selections are not a problem for classical optimizers, but a learning optimizer has to correlate reduction factors with changes in join decisions. This is difficult without observing a lot of different predicates at a variety of selectivities.
+It is easy to generate a large dataset with a lot of different join orders, however, generating random predicates on the tables can be more challenging. We train on 80 queries and test on 33 queries. We do 4 fold cross validation to ensure that every test query is excluded from the training set at least once. 
+
+\begin{table}[ht!]\centering \small
+\caption{Effect of Single Table Selections on \sys }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf CM1. No Sel}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
+{\bf CM1. Sel}  & 1.0  & 2.14   & 8.43    & 2.86x\\ \hline
+{\bf CM2. No Sel}  & 1.0  & 1.91   & 13.14    & 1.43x\\ \hline
+{\bf CM2. Sel}  & 1.0  & 3.55   & 38.54    & 1.96x\\ \hline
+{\bf CM3. No Sel}  & 1.0  & 3.76   & 113.89    & 2.51x\\ \hline
+{\bf CM3. Sel}  & 1.0  & 6.44   & 207.09    & 3.56x\\ \hline
+\end{tabular}
+\end{table}
+
+One approach addressing this issue is to augment the dataset with synthetic predicates. We could randomly sample equality conditions on each of the single tables. Figure \ref{exp:plot1} illustrates the results. We augment our training workload with a 100 additional training queries with random single table selections. With this data, we can better attribute the effects of selection on costs.   
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{exp/exp1_plot1.png}
+    \caption{Accurately modeling the effects of single table selections requires more training data. Generating a modest number of synthetic single table equality predicates can help. We plot the mean relative cost of \sys as a function of the number of synthetic predicates. \label{exp:plot1}}
+\end{figure}
+
+Selections are interesting because they have threshold effects on cost. Once a selectivity of a predicate on one of the relations drops beyond a certain point--the set of low cost plans might drastically change. These results are both positive and negative. First, it illustrates that learning-based approaches can easily be made robust to different phenomena by manipulating the training data and/or the featurization. On the other hand, the system may not accurately be able to assess its own confidence on previously unseen plans. It might make predictions assuming smooth behavior without knowledge of a drastic change due to selectivity. 
+
+\subsection{Data Quantity/Quality}
+We further evaluate the nature of training data required by \sys, in terms of raw quantity (number of training queries seen) and quality (the relevance to the test workload).
+
+\subsubsection{Quantity}
+We consider the optimization with no single table selections and use CM1. We vary the number of training queries given to \sys and plot the mean relative cost to optimal. Figure \ref{exp:plot2} illustrate the relationship. \sys requires about 30 training queries to match the performance of QuickPick 1000.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{exp/exp2_plot1.png}
+    \caption{The mean relative cost as a function of the number of training queries to \sys. We include QuickPick as a baseline. \label{exp:plot2}}
+\end{figure}
+
+We found that this break even point roughly corresponds to seeing all of the relations in a query at least once. In fact, one can train the model on ``small queries'' and test it on larger ones--as long as the relations are covered well. We trained \sys on all of the queries with less than 9 relations and tested on the remaining queries. Similarly, we trained on all of the queries with less than 8 relations and tested on the remaining queries. 
+
+\begin{table}[ht!]\centering \small
+\caption{Effect of Single Table Selections on \sys }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf Random}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
+{\bf Train} $< 9$  & 1.0  & 2.09   & 11.11    & 1.64x\\ \hline
+{\bf Train} $< 8$  & 1.0  & 9.91   & 53.66    & 2.43x\\ \hline
+\end{tabular}
+\end{table}
+
+Even when trained on subplans, \sys performs relatively well. This indicates that the structure that \sys is learning is local---how combinations of relations join together efficiently.
+
+\subsubsection{Relevance of Training Data}
+
+
+\subsubsection{Model-Limited or Data-Limited}
+In theory, with enough data, \sys should be approaching optimal performance.
+The natural next question is where does the gap come from---is it the neural networks ability to represent the cost function (Model-Limited) or is it a lack of training data (Data-Limited).
+We ran an experiment on the first 20 training queries. \sys sees these queries in training as well as during testing. This measures the ability to memorize training data.
+
 
 
 
