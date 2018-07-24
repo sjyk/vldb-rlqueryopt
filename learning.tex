@@ -1,19 +1,19 @@
 \begin{figure*}
     \centering
     \includegraphics[width=0.7\textwidth]{figs/featurization.png}
-    \caption{We use 1-hot encoding to capture which attributes participate in a join. This allows us to featurize both the query graph and the contraction. This figure shows the featurization for two different joins for the example query. \label{feat}}
+    \caption{We use 1-hot encoding to capture which attributes participate in a join. This allows us to featurize both the query graph and the contraction. This figure shows the featurization for two different joins for the example query. \zongheng{I can try to plot this in LaTex.} \label{feat}}
 \end{figure*}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{figs/selectivity.png}
-    \caption{To featurize single table selections, we scale the features by selectivity estimates given to use from a cost-estimator. \label{feat:sel}}
+    \caption{To featurize single table selections, we scale the features by selectivity estimates given to use from a cost-estimator. \zongheng{I can try to plot this in LaTex.} \label{feat:sel}}
 \end{figure}
 
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{figs/type.png}
-    \caption{To featurize join types, we add another feature vector to indicate the type of join used. For example, in a system that choses between index joins and hash joins, the example queries features would include the above vectors. \label{feat:type}}
+    \caption{To featurize join types, we add another feature vector to indicate the type of join used. For example, in a system that choses between index joins and hash joins, the example queries features would include the above vectors. \zongheng{I can try to plot this in LaTex.} \label{feat:type}}
 \end{figure}
 
 \section{Learning to Optimize}

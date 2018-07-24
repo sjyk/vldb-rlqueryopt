@@ -4,10 +4,10 @@ This benchmark is derived from the Internet Movie Data Base
 (IMDB). It contains information
 about movies and related facts about actors, directors,
 production companies, etc. 
-The dataset is 3.6 GB large and consists of 21 relational tables.
+The dataset is 3.6 GB in size and consists of 21 relational tables.
 The largest table has
-36 M rows.
-The benchmark contains 33 queries which have between 3 and 16 joins, with an average of 8 joins per query. 
+36 million rows.
+The benchmark contains 33 queries which have between 5 and 15 joins, with an average of 8 joins per query.  
 We evaluate \sys on this benchmark in terms of planning latency and plan cost.
 
 
@@ -16,8 +16,8 @@ As a secondary contribution of this paper, we find that the particular choice of
 The same query with different cost models can lead to different top-performing heuristics.
 Crucially, we find that many heuristics are sensitive to non-linearities.
 
-The cost model described in~\cite{leis2015good} is inspired by an in-memory system. The cost of a hash join is linear in the size of the input relations, and the cost of a index join is essentially the cost of streaming the left side of the join.
-This cost model greatly rewards index-usage (by convention the right relation is used for index lookup), and left-deep strategies are very strong in this setting. In fact, the authors quote: 
+The cost model described in~\cite{leis2015good} is inspired by an in-memory system. The cost of a hash join is linear in the size of the input relations, and the cost of an index join is essentially the cost of streaming the left side of the join.
+This cost model greatly rewards index-usage (by convention the right relation is used for index lookup), and left-deep strategies are very strong in this setting. In fact, the authors claim: 
 \begin{quote}
 \emph{``The bad performance of right-deep trees is caused by the large intermediate hash tables that need to be created from each base relation and the fact that only the bottom-most join can
 be done via index lookup.''}~\cite{leis2015good} 
@@ -25,7 +25,7 @@ be done via index lookup.''}~\cite{leis2015good}
 The conclusion is that the marginal benefit of bushy plans is small compared to the additional search costs.
 We argue that this is a consequence of the cost model and physical design and this led us to explore alternative cost models where the left-deep heuristic might fail.
 
-\vspace{0.25em} \noindent \textbf{CM1: } In the first cost model (inspired by~\cite{leis2015good}), we model a main-memory database that performs two types of joins: index nested-loop joins and in-memory hash joins. Let $O_l$ be the left operator and $O_r$ be the right operator the costs are defined as follows:
+\vspace{0.25em} \noindent \textbf{CM1: } In the first cost model (inspired by~\cite{leis2015good}), we model a main-memory database that performs two types of joins: index nested-loop joins and in-memory hash joins. Let $O_l$ be the left operator and $O_r$ be the right operator. The costs are defined as follows:
 \[
 \textsf{c}_{inlj} = \textsf{c}(O_l) + \textsf{rf}(O_l, O_r) \cdot |O_l|
 \]
@@ -45,7 +45,7 @@ If the previous join has already built a hash table on an attribute of interest,
 \[
 \textsf{c}_{nobuild} = \textsf{c}(O_r)
 \]
-This model favors right-deep plans where to maximize the reuse of the built hash tables.
+This model favors right-deep plans which maximize the reuse of the built hash tables.
 
 
 \vspace{0.25em} \noindent \textbf{CM3: } Finally, in the next cost model, we model temporary tables and memory capacity constraints. There is a budget of tuples that can fit in memory and an additional physical operator that allows for materialization of a join result if memory exists. Then, the downstream cost of reading from a materialized operator is 0.   
@@ -185,13 +185,73 @@ We found that this break even point roughly corresponds to seeing all of the rel
 Even when trained on subplans, \sys performs relatively well. This indicates that the structure that \sys is learning is local---how combinations of relations join together efficiently.
 
 \subsubsection{Relevance of Training Data}
+Next, we consider the effect of different training data sampling schemes. 
+We consider the optimization with single table selections and use CM1.
+Figure \ref{exp:plot3} plots the performance of different data sampling techniques each with 80 training queries. The more relevant the training queries can be made towards the test workload, the less data is required for good performance.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{exp/exp2_plot2.png}
+    \caption{We plot the relative performance of \sys with different training workloads. R80 is a dataset sampled independent of the JOB workload with random joins from the schema and random equality predicates. R80wp is samples from random joins as before but single table predicates from the workload. WK 80 includes 80 queries samples from the workload, and T80 describes a scheme where each of the 33 query templates is covered at least once in sampling. \label{exp:plot3}}
+\end{figure}
+
+It also shows that the performance does not completely suffer with random queries. 
+\sys still achieves a lower cost compared to Quick Pick 1000 even with random queries.
+The goal of this experiment is to illustrate that \sys does not actually require \emph{a priori} knowledge of the workload.
+
+\subsubsection{Quality of Training Planner}
+Next, we evaluate different training planners for collecting the training dataset.  We consider the optimization with single table selections and use CM1. We collect a varying amount of data sampled from queries in the workload. We compare using a QuickPick 1000 planner, Left-Deep planner, and the Bushy planner described earlier (Figure \ref{exp:plot4}).  All of the methods very quickly converge to good solutions. The dynamic programming-based methods, Left-Deep and Bushy, converge faster as they generate training data for subplans as well. The QuickPick planner gives us 1000 random trajectories per query.
+The subplan structure is very valuable for training and covering the space of different relation combinations that might be seen in testing.
 
 
-\subsubsection{Model-Limited or Data-Limited}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\columnwidth]{exp/exp2_plot3.png}
+    \caption{ We compare using a QuickPick 1000 planner, Left-Deep planner, and the Bushy planner to collect training data.\label{exp:plot4}}
+\end{figure}
+
+
+\subsubsection{Model Choice}
 In theory, with enough data, \sys should be approaching optimal performance.
 The natural next question is where does the gap come from---is it the neural networks ability to represent the cost function (Model-Limited) or is it a lack of training data (Data-Limited).
-We ran an experiment on the first 20 training queries. \sys sees these queries in training as well as during testing. This measures the ability to memorize training data.
+We ran an experiment on the first 20 training queries. \sys sees these queries in training as well as during testing. This measures the ability to memorize training data. We train the model to convergence and measure the error. We report the fraction of 20 queries where the learned planner exactly matched the optimal planner performance.
 
+\begin{table}[ht!]\centering \small
+\caption{Ability to Memorize}\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|}\hline
+    & {\bf CM 1}  & {\bf CM 2}  & {\bf CM 3} \\ \hline
+{\bf With Selections}  & 0.90  & 0.75   & 0.90 \\ \hline
+{\bf Without Selections}  & 1.0  & 0.80   &  0.95\\ \hline
+\end{tabular}
+\end{table}
 
+We see that there is some inherent imprecision in the neural network, even if the exact testing query has been seen before. We find that this has less to do with the linearity or non-linearity of the cost function, but rather how ``close'' good plans are in terms of cost. If there are a lot of roughly similar good plans the neural network may not have enough precision to differentiate between them.
+This means that even with unlimited data we may not match an optimal planner. 
 
+This does raise the question about our modeling choices. We do an ablation study of the featurization choices described in the paper and they really suggest that all of the different features are necessary for performance:
+
+\begin{table}[ht!]\centering \small
+\caption{Feature Ablation}\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|}\hline
+    & {\bf Graph Features}  & {\bf Sel. Scaling}  & {\bf Loss} \\ \hline
+{\bf No Selections}  & N  & N   & 0.087 \\ \hline
+ & Y  & N   & 0.04914 \\ \hline
+  & Y  & Y   & 0.04914 \\ \hline
+\hline
+{\bf Selections}  & N  & N   &  0.071\\ \hline
+& Y  & N   &  0.051\\ \hline
+& Y  & N   &  0.020\\ \hline
+\end{tabular}
+\end{table}
+
+Without features derived from the query graph and scaling based on the cost model the training loss is 3.5x more. This means that the network cannot predict accurately even on the training data.
+
+\subsubsection{Sensitivity Analysis}
+\textbf{TODO}
+
+\subsection{Runtime}
+\textbf{TODO}
+
+\subsection{Real Execution}
+\textbf{TODO}
 
