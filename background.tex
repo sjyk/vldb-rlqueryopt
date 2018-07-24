@@ -124,10 +124,7 @@ So, Q-Learning defines a loss:
 \[
 L(Q) = \sum_{i} \|y_i - Q_\theta(G',c)\|_2^2
 \]
-This loss can be optimized with gradient descent:
-\[
-\theta^{(i+1)} = \theta^{(i)} + \alpha \cdot [ (R + \max_{c'} Q_\theta(G',c')) - Q_\theta(G,c) ] \cdot \nabla Q_\theta(G,c) 
-\]
 
+This loss can be optimized with gradient descent.
 This algorithm is called the Deep Q Network algorithm~\cite{mnih2015human} and was used to learn how to autonomously play Atari Games.
 The key implication is that the neural network allows for some ability for the optimizer to extroplate the cost-to-go even for plans that are not enumerated. This means that if the featurization $f_G$ and $f_c$ are designed in a sufficiently general way, then the neural network can represent cost-to-go estimates across an entire workload--not just a single planning instance.

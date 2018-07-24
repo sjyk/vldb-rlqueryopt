@@ -14,7 +14,7 @@ We multiply the reduction factors $\delta_r$ for each table with the features co
 To add support for an optimizer that selects physical operators, we simply have to add ``labeled'' contractions, where certain physical operators are eligible. Suppose we have a set of possible physical operators, e.g., \textsf{nestedLoop}, \textsf{sortMerge}, \textsf{indexLoop}. We would simply add an additional feature to the Q-Function that captures which physical operator is selected.
 
 \subsection{Indexes and Sort Orders}
-Similarly, adding support for indexes just means adding more features. We eagerly use index scans on single relation selections, and can use them for joins if we are optimizing physical operators. We can add an addition set of binary features $V_{ind}$ that indicate which attributes have indexes built on them. Handling, sort-orders are similar and we have to add features describing which attributes need to be finally sorted in the query.
+
 
 \subsection{Summary and System Architecture}
 Surprisingly, we found that we could build a relatively full featured query optimizer based on a Deep RL join enumeration strategy.
