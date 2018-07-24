@@ -89,11 +89,11 @@ If we revisit the greedy algorithm, and revise it as follows: (1) start with the
 
 The Q-function is implicitly stored as a table in classical dynamic programming approaches, such as the System R enumeration algorithm. In the System R algorithm, there is a hash table that maps sets of joined relations to their lowest-cost access path:
 \begin{lstlisting}
-HashMap<Set<Relation>, (Plan, Long) > bestJoins;
+HashMap<Set<Relation>, (Plan, Long)> bestJoins;
 \end{lstlisting}
 As the algorithm enumerates more subplans, if a particular relation set exists in the table it replaces the access path if the enumerated plan has a lower cost than one in the table. We could equivalently write a different hash table that moves around the elements on the table described above. Instead of a set of relations mapping to a plan and a cost, we could consider a set of relations \emph{and} a plan mapping to a cost: 
 \begin{lstlisting}
-HashMap< (Set<Relation>, Plan), Long > bestQJoins;
+HashMap<(Set<Relation>, Plan), Long> bestQJoins;
 \end{lstlisting}
 As the algorithm enumerates more plans, the algorithm put enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace all child plans with the \emph{cost of the parent} if lower. Once this table is constructed, backtracking can be used to retrieve an optimal plan.
 
@@ -114,15 +114,22 @@ The objective of the planning problem is to find a policy, which is a map from a
 
 In the popular Q-Learning approach~\cite{sutton1998reinforcement}, the algorithm enumerates random samples of decision sequences containing $(G,c, runtime, G')$ tuples forming a trajectory. From these tuples, one can calculate the following value:
 \[
-y_i = runtime + \arg \max_{u} Q(G',c)
+y_i = runtime + \arg \max_{u} Q_\theta(G',c)
 \]
 Each of the $y_i$ can be used to define a loss function since if $Q$ were the true Q function, then the following recurrence would hold:
 \[
-Q(G,c) = runtime + \arg \max_{u} Q(G',c)
+Q(G,c) = runtime + \arg \max_{u} Q_\theta(G',c)
 \]
 So, Q-Learning defines a loss:
 \[
-L(Q) = \sum_{i} \|y_i - Q(G',c)\|_2^2
+L(Q) = \sum_{i} \|y_i - Q_\theta(G',c)\|_2^2
 \]
-This loss can be optimized with gradient descent.This algorithm is called the Deep Q Network algorithm~\cite{mnih2015human} and was used to learn how to autonomously play Atari Games.
+This loss can be optimized with gradient descent:
+\[
+\theta^{(i+1)} = \theta^{(i)} + \alpha \cdot [ (R + \max_{c'} Q_\theta(G',c')) - Q_\theta(G,c) ] \cdot \nabla Q_\theta(G,c) 
+\]
+
+
+
+This algorithm is called the Deep Q Network algorithm~\cite{mnih2015human} and was used to learn how to autonomously play Atari Games.
 The key implication is that the neural network allows for some ability for the optimizer to extroplate the cost-to-go even for plans that are not enumerated. This means that if the featurization $f_G$ and $f_c$ are designed in a sufficiently general way, then the neural network can represent cost-to-go estimates across an entire workload--not just a single planning instance.

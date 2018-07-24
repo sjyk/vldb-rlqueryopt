@@ -1,6 +1,5 @@
 \section{Learning to Optimize}
-Next, we present the entire optimization algorithm for learning join enumeration.
-We will first presented the algorithm only for the enumeration problem, and then we contextualize the optimizer for full Select-Project-Join queries accounting for single relation selections, projections, and sort-orders.
+To be able to learn the Q function, we need two pieces: featurized representation for the arguments ($G$ and $c$) and a way of collecting training data.
 
 \subsection{Featurizing the Join Decision}
 We need to featurize the query graph $G$ and a particular contraction $c$, which is a tuple of two vertices from the graph. 
