@@ -5,10 +5,11 @@ First, we will introduce the algorithmic connection between Reinforcement Learni
 Consider the following query model.
 Let $\{R_1,...,R_T\}$ define a set of relations, and let $\mathcal{R} = R_1 \times ... \times R_T$ denote the cartesian product.
 We define an inner join query $q$ as a subset of $q \subseteq \mathcal{R}$ as defined by a conjunction of equality predicates. We assume that the number of conjunctive expressions is capped at some fixed size $\mathcal{N}$.
-We further assume that the join operation is commutative, left associative, and right associative.
+\jmh{The following sentence is implicit in the definition of cartesian product and selection.} We further assume that the join operation is commutative, left associative, and right associative.
+\jmh{The ``very straight-forward'' statement is a bit unnerving, especially after the assertion about commutativity and associativity, which outer joins don't promise. Maybe a forward ref here to an ``extensions'' discussion later in the paper, where you address expanding the search space to handle outer joins.a}
 Extending our work to consider left and right outer joins is very straight-forward but we will defer that to that to future work.
 
-We will use the following database of three relations denoting employee salries as a running example throughout the paper:
+We will use the following database of three relations denoting employee salaries as a running example throughout the paper:
 \[
 \text{Emp}(id, name, rank)
 \]
@@ -25,10 +26,17 @@ SELECT *
  WHERE Emp.rank = Pos.rank AND
  Pos.code = Sal.code
 \end{lstlisting}
-In this schema, $\mathcal{R}$ denotes the set of tuples $\{(e \in Emp, p \in Pos, s \in Sal)\}$. There are two predicates $\rho_1 = Emp.rank = Pos.rank$ and $\rho_2 = Pos.code = Sal.code$, combined with a conjunction. 
+In this schema, $\mathcal{R}$ denotes the set of tuples $\{(e \in Emp, p \in Pos, s \in Sal)\}$. \jmh{Notational abuse above. Could be $e \circ p \circ s \in (Emp \times Pos \times Sal)$ or just $r \in (Emp \times Pos \times Sal)$.} There are two predicates $\rho_1 = Emp.rank = Pos.rank$ and $\rho_2 = Pos.code = Sal.code$, combined with a conjunction. 
+
+\jmh{In the remainder of this paper, we make the classical assumption of searching for a query plan made up of binary join operators and unary selections, projections and access methods. We discussion extensions to this classical algebra in Section~\ref{sec:extensions}.  Given this search space,}
 One has several possible options on how to execute that query. For example, one could execute the query as $Emp \bowtie (Sal \bowtie Pos)$. Or, one could execute the query as $Sal \bowtie (Emp \bowtie Pos)$. 
 
+\jmh{From here on I'd remove mention of ``dyadic'' plans; it's not all that standard terminology in the optimizer literature.}
+
+
 \subsection{Graph Model of Enumeration}
+\jmh{It would be nice to be told why you want to introduce this formalism. Something like this: ``It will be useful in subsequent discussion to consider the construction of a query plan tree by viewing its nesting as a sequence of \emph{graph contractions}. We briefly introduce the formalism here.''}
+
 Enumerating the set of all possible dyadic join plans can be expressed as operations on a graph representing the join relationships requested by a query.
 
 \begin{definition}[Query Graph]
@@ -41,9 +49,9 @@ Each possible dyadic join is equivalent to a combinatorial operation called a gr
 Let $G = (V,E)$ be a query graph with V defining the set of relations and E defining the edges from the join predicates. A contraction $c$ is a function of the graph parametrized by a tuple of vertices $c=(v_i, v_j)$. Applying $c$ to the graph $G$ defines a new graph with the following properties: (1) $v_i$ and $v_j$ are removed from $V$, (2) a new vertex $v_{ij}$ is added to $V$, and (3) the edges of $v_{ij}$ are the union of the edges incident to $v_i$ and $v_j$. 
 \end{definition}
 
-Each contraction reduces the number of vertices by $1$. And, that every feasible dyadic join plan can be described as a sequence of such contractions $c_1 \circ c_2 ...\circ c_{T}$ until $|V| = \kappa_G$. Going back to our running example, suppose we start with a query graph consisting of the vertices $(Emp, Pos, Sal)$. Let the first contraction be $c_1 = (Emp, Pos)$, this leads to a query graph where the new vertices are $(Emp+Pos, Sal)$. Applying the only remaining possible contraction, we arrive at a single remaining vertex $Sal+(Emp+Pos)$ corresponding to the join plan $Sal \bowtie (Emp \bowtie Pos)$. 
+Each contraction reduces the number of vertices by $1$. \jmh{Next sentence is AWK.} And, that every feasible dyadic join plan can be described as a sequence of such contractions $c_1 \circ c_2 ...\circ c_{T}$ until $|V| = \kappa_G$. Going back to our running example, suppose we start with a query graph consisting of the vertices $(Emp, Pos, Sal)$. Let the first contraction be $c_1 = (Emp, Pos)$; this leads to a query graph where the new vertices are $(Emp+Pos, Sal)$. \jmh{This $+$ notation is new here. Should be consistent in the definition of a contraction: ``a new vertex ($v_i+v_j$)...''.} Applying the only remaining possible contraction, we arrive at a single remaining vertex $Sal+(Emp+Pos)$ corresponding to the join plan $Sal \bowtie (Emp \bowtie Pos)$. 
 
-The join optimization is to find the best possible one of these contraction sequences. Assume that we have access to a cost model $J$, which is a function that can estimate the incremental cost of a particular contraction $J(c) \mapsto \mathbb{R}_+$. 
+The join optimization problem is to find the best possible one of these contraction sequences \jmh{---i.e., the best query plan}. Assume that we have access to a cost model $J$, which is a function that can estimate the incremental cost of a particular contraction $J(c) \mapsto \mathbb{R}_+$. 
 
 \begin{problem}[Join Optimization Problem]
 Let $G$ define a query graph and $J$ define a cost model. Find a sequence of $c_1 \circ c_2 ...\circ c_{T}$ terminating in $|V| = \kappa_G$ to minimize:
@@ -52,13 +60,15 @@ Let $G$ define a query graph and $J$ define a cost model. Find a sequence of $c_
 \]\label{joinopt}
 \end{problem}
 
-Note how the ``Principle of Optimality'' arises in Problem \ref{joinopt}. Applying each contraction generates a subproblem of a smaller size (a query graph with one less vertex). Each of these subproblems must be solved optimally in any optimal solution. Also note that this model can capture physical operator selection as well. The set of allowed contractions can be typed with an eligible join type e.g., $c=(v_i, v_j, \text{hash})$ or $c=(v_i, v_j, \text{index})$.
+Note how the ``Principle of Optimality'' arises in Problem \ref{joinopt}. Applying each contraction generates a subproblem of a smaller size (a query graph with one less vertex). Each of these subproblems must be solved optimally in any optimal solution. Also note that this model can \jmh{be simply extended to} capture physical operator selection as well. The set of allowed contractions can be typed with an eligible join type e.g., $c=(v_i, v_j, \text{hash\jmh{\_join}})$ or $c=(v_i, v_j, \text{index\jmh{\_join}})$.
 
 \subsection{Greedy vs. Optimal}
+\jmh{I think this section would benefit from more signposting for the database reader. Something to the effect of this: ``In traditional query optimization, the principle of optimality leads to an exhaustive dynamic programming algorithm that enumerates a lookup table of best subplans and costs for subsets of the tables in the query. This leads to the true optimum if we populate that table exhaustively, including ``bushy'' join trees, cartesian products, and so on. Suppose we don't want to exhaustively populate that table. Can we use machine learning to predict the costs for some entries in the table, skip over the ones that are likely too expensive, and predict best plans for the remaining entries of interest? This approach is a classical aspect of Reinforcement Learning known as Q-learning; we review it here in the context of query optimization.''  Alternatively, that kind of text goes in the Intro, and is echoed here: ``In this section we develop the intution from the introduction about predicting the values in a dynamic programming table using machine learning.''}
+
 A \emph{greedy} solution to this problem is to optimize each $c_i$ independently. The algorithm proceeds as follows: (1) start with the query graph, (2) find the lowest cost contraction, (3) update the query graph and repeat until only one vertex is left. The greedy algorithm, of course, does not consider how local decision might affect future costs. Consider our running example query with the following costs (assume symmetry):
 \[J(EP)= 100,~J(SP)= 90,~J((EP)S)= 10,~J((SP)E)= 50\]
 The greedy solution would result in a cost of 140 (because it neglects the future effects of a decision), while the optimal solution has a cost of 110.
-However, there is an upside, this greedy algorithm has a computational complexity of $O(|V|^3)$---despite the super-exponential search space.
+However, there is an upside: this greedy algorithm has a computational complexity of $O(|V|^3)$, despite the super-exponential search space.
 
 The decision at each index needs to consider the long-term value of its actions where one might have to sacrifice a short term benefit for a long term payoff.
 Consider the following way of expressing the optimization problem in the problem statement for a particular query graph $G$:
@@ -67,13 +77,13 @@ V(G) = \min_{c_1,...,c_T} \sum_{i=1}^T J(c_i)
 \label{eq:main}
 \end{equation}
 
-We can concisely describe Equation \ref{eq:main} as the function $V(G)$, i.e., given the initial graph $G$, what is the value of acting optimally till the end of the decision horizon. This function is conveniently named the \emph{value function}. Bellman's ``Principle of Optimality'' noted that optimal behavior over an entire decision horizon implies optimal behavior from any starting index $t>1$ as well, which is the basis for the idea of dynamic programming.
-So, $V(G)$ can be then defined recursively for any subsequent graph $G'$ generated by future contractions:
+We can concisely describe Equation \ref{eq:main} as the function $V(G)$, \jmh{That's a funny clause ... the equation defines $V(G)$!} i.e., given the initial graph $G$, what is the value of acting optimally until the end of the decision horizon. This function is conveniently named the \emph{value function}. Bellman's ``Principle of Optimality'' noted that optimal behavior over an entire decision horizon implies optimal behavior from any starting index $t>1$ as well, which is the basis for the idea of dynamic programming.
+So, $V(G)$ can then be defined recursively for any subsequent graph $G'$ generated by future contractions:
 \begin{equation}
 V(G) = \min_{c}\{~J(c) + \gamma \cdot V(G') ~\}
 \label{eq:value}
 \end{equation}
-Usually, write this value recursion in the following form:
+It is common to write this value recursion in the following form:
 \[
 Q(G,c) = J(c) + \gamma \cdot V(G')
 \]
@@ -84,29 +94,29 @@ Q(G,c) = J(c) + \gamma \cdot \min_{c'} Q( G',c')
 \end{equation}
 
 The Q-Function describes the long-term value of each contraction. 
-That means at each $G'$ local optimization of $\min_{c'} Q(G',c')$ is sufficient to derive an optimal sequence of decisions. Put another way, the Q-function is a hypothetical cost function on which greedy descent is optimal and equivalent to solving the original problem.
+That means that at each $G'$, local optimization of $\min_{c'} Q(G',c')$ is sufficient to derive an optimal sequence of decisions. Put another way, the Q-function is a hypothetical cost function on which greedy descent is optimal and equivalent to solving the original problem.
 If we revisit the greedy algorithm, and revise it as follows: (1) start with the query graph, (2) find the lowest \textbf{Q-value} contraction, (3) update the query graph and repeat. This algorithm has a computational complexity of $O(|V|^3)$ (just like the greedy algorithm) but is provably optimal. 
 
-The Q-function is implicitly stored as a table in classical dynamic programming approaches, such as the System R enumeration algorithm. In the System R algorithm, there is a hash table that maps sets of joined relations to their lowest-cost access path:
+The Q-function is implicitly stored as a table in classical dynamic programming approaches, such as the System R enumeration algorithm. In the System R algorithm, there is a hash table that maps sets of joined relations to their lowest-cost access path \jmh{, in Java notation}:
 \begin{lstlisting}
 HashMap<Set<Relation>, (Plan, Long)> bestJoins;
 \end{lstlisting}
-As the algorithm enumerates more subplans, if a particular relation set exists in the table it replaces the access path if the enumerated plan has a lower cost than one in the table. We could equivalently write a different hash table that moves around the elements on the table described above. Instead of a set of relations mapping to a plan and a cost, we could consider a set of relations \emph{and} a plan mapping to a cost: 
+As the algorithm enumerates more subplans, if a particular relation set exists in the table it replaces a previously-stored access path if the enumerated plan has a lower cost than one in the table. We could equivalently write a different hash table that restructures the elements in the table described above. Instead of a set of relations mapping to a plan and a cost, we could consider a set of relations \emph{and} a plan mapping to a cost: 
 \begin{lstlisting}
 HashMap<(Set<Relation>, Plan), Long> bestQJoins;
 \end{lstlisting}
-As the algorithm enumerates more plans, the algorithm put enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace all child plans with the \emph{cost of the parent} if lower. Once this table is constructed, backtracking can be used to retrieve an optimal plan.
+As the algorithm enumerates more plans, the algorithm puts enumerated plans into the table. However, the replacement policy for this table is slightly different than in the classical model. As we enumerate plans, we replace all child plans \jmh{what is the child-parent relationship here?} with the \emph{cost of the parent} if lower. Once this table is constructed, backtracking can be used to retrieve an optimal plan. \jmh{Give a simple exmaple.  Also signpost this flow of discussion better---help explain why you are doing this here.}
 
 \subsection{Learning the Q-Function}
-This change would be less efficient implementation in classical dynamic programming, but it crucially allows us to setup a machine learning problem. 
+This change \jmh{what change?} would be a less efficient implementation in classical dynamic programming, but it crucially allows us to setup a machine learning problem. 
 What if we could regress from features of \texttt{(Set<Relation>, Plan)} to a cost based on a small number of observations?
-Instead of a Q-Function as a table, it is parametrized as a model:
+Instead of a Q-Function as a table, it is parameterized as a model:
 \[
 Q_\theta(f_G,f_c) \approx Q(G,c)
 \]
-where $f_G$ is a feature vector representing the query graph and $f_c$ is a feature vector representing the particular contraction on the graph. $\theta$ defines the neural network parameters that represent this function. 
+where $f_G$ is a feature vector representing the query graph and $f_c$ is a feature vector representing the particular contraction on the graph. $\theta$ defines the neural network \jmh{doesn't have to be an NN ... model} parameters that represent this function. 
 
-The basic strategy to generate observational data, that is, real executions of join plans, and optimize $\theta$ to best explain the observations. Such an optimization problem is a key motivation of a general class of algorithms called Reinforcement Learning~\cite{sutton1998reinforcement}, where statistical machine learning techniques are used to approximate optimal behavior while observing substantially less data that full enumeration. 
+The basic strategy \jmh{for what} is to generate observational data, that is, real executions of join plans, and optimize $\theta$ to best explain the observations. Such an optimization problem is a key motivation of a general class of algorithms called Reinforcement Learning~\cite{sutton1998reinforcement}, where statistical machine learning techniques are used to approximate optimal behavior while observing substantially less data that full enumeration. 
 
 For those familiar with the AI literature, this problem defines a Markov Decision Process. $G$ is exactly a representation of the \textbf{state} and $c$ is a representation of the \textbf{action}.
 The utility function (or reward) of this process is the negative overall runtime.
@@ -120,10 +130,13 @@ Each of the $y_i$ can be used to define a loss function since if $Q$ were the tr
 \[
 Q(G,c) = J(c) + + \arg \max_{c'} Q_\theta(G',c')
 \]
+\jmh{Did you mean to have two plusses?}
 So, Q-Learning defines a loss:
 \[
 L(Q) = \sum_{i} \|y_i - Q_\theta(G',c)\|_2^2
 \]
-This loss can be optimized with gradient descent.
+\jmh{Should that be $G$, not $G'$?}
+
+This loss can be optimized with gradient descent. \jmh{When the model being optimized is a deep neural network,}
 This algorithm is called the Deep Q Network algorithm~\cite{mnih2015human} and was used to learn how to autonomously play Atari Games.
-The key implication is that the neural network allows for some ability for the optimizer to extroplate the cost-to-go even for plans that are not enumerated. This means that if the featurization $f_G$ and $f_c$ are designed in a sufficiently general way, then the neural network can represent cost-to-go estimates across an entire workload--not just a single planning instance.
+The key implication is that the neural network allows for some ability for the optimizer to extroplate the cost-to-go even for plans that are not enumerated. This means that if the featurization $f_G$ and $f_c$ are designed in a sufficiently general way, then the neural network can represent cost-to-go estimates across an entire workload of queries--not just a single query planning instance.
