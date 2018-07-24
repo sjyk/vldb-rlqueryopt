@@ -170,7 +170,22 @@ We consider the optimization with no single table selections and use CM1. We var
     \caption{The mean relative cost as a function of the number of training queries to \sys. We include QuickPick as a baseline. \label{exp:plot2}}
 \end{figure}
 
-We found that this break even point roughly corresponds to seeing all of the relations in a query at least once.
+We found that this break even point roughly corresponds to seeing all of the relations in a query at least once. In fact, one can train the model on ``small queries'' and test it on larger ones--as long as the relations are covered well. We trained \sys on all of the queries with less than 9 relations and tested on the remaining queries. Similarly, we trained on all of the queries with less than 8 relations and tested on the remaining queries. 
+
+\begin{table}[ht!]\centering \small
+\caption{Effect of Single Table Selections on \sys }\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}\hline
+    & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
+{\bf Random}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
+{\bf Train} $< 9$  & 1.0  & 2.09   & 11.11    & 1.64x\\ \hline
+{\bf Train} $< 8$  & 1.0  & 9.91   & 53.66    & 2.43x\\ \hline
+\end{tabular}
+\end{table}
+
+Even when trained on subplans, \sys performs relatively well. This indicates that the structure that \sys is learning is local---how combinations of relations join together efficiently.
+
+\subsubsection{Relevance of Training Data}
+
 
 \subsubsection{Model-Limited or Data-Limited}
 In theory, with enough data, \sys should be approaching optimal performance.
