@@ -7,7 +7,7 @@ production companies, etc.
 The dataset is 3.6 GB in size and consists of 21 relational tables.
 The largest table has
 36 million rows.
-The benchmark contains 33 queries which have between 5 and 15 joins, with an average of 8 joins per query.  
+The benchmark contains 33 queries which have between 4 and 15 joins, with an average of 8 joins per query.  
 We evaluate \sys on this benchmark in terms of planning latency and plan cost.
 
 
@@ -73,12 +73,12 @@ We consider the following baseline algorithms. These algorithms are not meant to
 In the first experiment, we evaluate all of the baseline algorithms against \sys in terms of final optimization cost. All of the algorithms consider join ordering without cartesian products, so \textbf{EX} is a baseline optimal solution. We report results in terms of the suboptimality w.r.t \textbf{EX}.
 
 \subsubsection{Without Single Table Selections}
-We first evaluate consider the 33 join order benchmark query templates without single table selections. We train on 26 queries and test on 7 held out queries. We report results averaged over 5-fold cross-validation (so all of the reported numbers are when the query is not seen during training). We report the min, mean, and max cost relative to the baseline.  For randomized algorithms the max range of performance (as a multiplicative factor) over 5 trials.
+We first evaluate the 33 join order benchmark query templates without single table selections. We train on 26 queries and test on 7 held out queries. We report results averaged over 5-fold cross-validation (so all of the reported numbers are when the query is not seen during training). We report the min, mean, and max cost relative to the baseline.  For randomized algorithms the max range of performance (as a multiplicative factor) over 5 trials.
 
 In the first experiment, we consider CM1. This is an idealized model that heavily encourages index usage. All of the optimal plans for this workload are left-deep. Predictably, right-deep plans perform very poorly. \sys significantly out performs the heuristic solutions \textbf{KBZ} and \textbf{QP}. \sys is also far more reliable in terms worst case performance. 
 
 \begin{table}[ht!]\centering \small
-\caption{CM1 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\caption{\small{CM1 No Selections. Cost Relative to Optimal Plan.} }\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
     & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
@@ -96,7 +96,7 @@ In the first experiment, we consider CM1. This is an idealized model that heavil
 By simply changing the cost model, we can force exactly the opposite heuristic to perform well. When we evaluate CM2, which accounts for reuse of hash tables, right-deep plans are no longer so poor. In this cost model, none of the heuristics match the exhaustive search over the entire workload. \sys comes close and it is actually significantly better than zig-zag enumeration for this cost model.
 
 \begin{table}[ht!]\centering \small
-\caption{CM2 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\caption{\small{CM2 No Selections. Cost Relative to Optimal Plan.}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
     & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
@@ -114,7 +114,7 @@ By simply changing the cost model, we can force exactly the opposite heuristic t
 CM3 is meant to illustrate a cost-model where no heuristic performs well. We count the number of tuples materialized and to benfit from the materialization these tuples must fit into memory. This leads to a ``packing'' like optimization problem where the exact join order also depends on how well the intermediate results can be packed into memory. \sys is still performant in this setting as it adapts to the properties of the workload.
 
 \begin{table}[ht!]\centering \small
-\caption{CM3 No Selections. Cost Relative to Optimal Plan. }\vspace{0.25em}
+\caption{\small{CM3 No Selections. Cost Relative to Optimal Plan.}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
     & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
@@ -136,7 +136,7 @@ Next, we show the performance of \sys on the 113 JOB queries when we include sin
 It is easy to generate a large dataset with a lot of different join orders, however, generating random predicates on the tables can be more challenging. We train on 80 queries and test on 33 queries. We do 4 fold cross validation to ensure that every test query is excluded from the training set at least once. 
 
 \begin{table}[ht!]\centering \small
-\caption{Effect of Single Table Selections on \sys }\vspace{0.25em}
+\caption{\small{Effect of Single Table Selections on \sys.}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|l|}\hline
     & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
 {\bf CM1. No Sel}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
@@ -153,7 +153,7 @@ One approach addressing this issue is to augment the dataset with synthetic pred
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{exp/exp1_plot1.png}
-    \caption{Accurately modeling the effects of single table selections requires more training data. Generating a modest number of synthetic single table equality predicates can help. We plot the mean relative cost of \sys as a function of the number of synthetic predicates. \label{exp:plot1}}
+    \caption{\small{Accurately modeling the effects of single table selections requires more training data. Generating a modest number of synthetic single table equality predicates can help. We plot the mean relative cost of \sys as a function of the number of synthetic predicates.} \label{exp:plot1}}
 \end{figure}
 
 Selections are interesting because they have threshold effects on cost. Once a selectivity of a predicate on one of the relations drops beyond a certain point--the set of low cost plans might drastically change. These results are both positive and negative. First, it illustrates that learning-based approaches can easily be made robust to different phenomena by manipulating the training data and/or the featurization. On the other hand, the system may not accurately be able to assess its own confidence on previously unseen plans. It might make predictions assuming smooth behavior without knowledge of a drastic change due to selectivity. 
@@ -167,13 +167,13 @@ We consider the optimization with no single table selections and use CM1. We var
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{exp/exp2_plot1.png}
-    \caption{The mean relative cost as a function of the number of training queries to \sys. We include QuickPick as a baseline. \label{exp:plot2}}
+    \caption{\small{The mean relative cost as a function of the number of training queries to \sys. We include QuickPick as a baseline.} \label{exp:plot2}}
 \end{figure}
 
 We found that this break even point roughly corresponds to seeing all of the relations in a query at least once. In fact, one can train the model on ``small queries'' and test it on larger ones--as long as the relations are covered well. We trained \sys on all of the queries with less than 9 relations and tested on the remaining queries. Similarly, we trained on all of the queries with less than 8 relations and tested on the remaining queries. 
 
 \begin{table}[ht!]\centering \small
-\caption{Effect of Single Table Selections on \sys }\vspace{0.25em}
+\caption{\small{Effect of Single Table Selections on \sys.}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|l|}\hline
     & {\bf Min}  & {\bf Mean}  & {\bf Max}    & {\bf Range-Max} \\ \hline
 {\bf Random}  & 1.0  & 1.36   & 3.11    & 1.79x\\ \hline
@@ -192,7 +192,9 @@ Figure \ref{exp:plot3} plots the performance of different data sampling techniqu
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{exp/exp2_plot2.png}
-    \caption{We plot the relative performance of \sys with different training workloads. R80 is a dataset sampled independent of the JOB workload with random joins from the schema and random equality predicates. R80wp is samples from random joins as before but single table predicates from the workload. WK 80 includes 80 queries samples from the workload, and T80 describes a scheme where each of the 33 query templates is covered at least once in sampling. \label{exp:plot3}}
+    \caption{\small{
+    We plot the relative performance of \sys with different training workloads. R80 is a dataset sampled independent of the JOB workload with random joins from the schema and random equality predicates. R80wp is samples from random joins as before but single table predicates from the workload. WK 80 includes 80 queries samples from the workload, and T80 describes a scheme where each of the 33 query templates is covered at least once in sampling.
+    }\label{exp:plot3}}
 \end{figure}
 
 It also shows that the performance does not completely suffer with random queries. 
@@ -207,7 +209,10 @@ The subplan structure is very valuable for training and covering the space of di
 \begin{figure}
     \centering
     \includegraphics[width=0.8\columnwidth]{exp/exp2_plot3.png}
-    \caption{ We compare using a QuickPick 1000 planner, Left-Deep planner, and the Bushy planner to collect training data.\label{exp:plot4}}
+    \caption{
+    \small{
+    We compare using a QuickPick 1000 planner, Left-Deep planner, and the Bushy planner to collect training data.
+    }\label{exp:plot4}}
 \end{figure}
 
 
@@ -217,7 +222,7 @@ The natural next question is where does the gap come from---is it the neural net
 We ran an experiment on the first 20 training queries. \sys sees these queries in training as well as during testing. This measures the ability to memorize training data. We train the model to convergence and measure the error. We report the fraction of 20 queries where the learned planner exactly matched the optimal planner performance.
 
 \begin{table}[ht!]\centering \small
-\caption{Ability to Memorize}\vspace{0.25em}
+\caption{\small{Ability to Memorize}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|}\hline
     & {\bf CM 1}  & {\bf CM 2}  & {\bf CM 3} \\ \hline
 {\bf With Selections}  & 0.90  & 0.75   & 0.90 \\ \hline
@@ -231,7 +236,7 @@ This means that even with unlimited data we may not match an optimal planner.
 This does raise the question about our modeling choices. We do an ablation study of the featurization choices described in the paper and they really suggest that all of the different features are necessary for performance:
 
 \begin{table}[ht!]\centering \small
-\caption{Feature Ablation}\vspace{0.25em}
+\caption{\small{Feature Ablation}}\vspace{0.25em}
 \begin{tabular}{|l|l|l|l|}\hline
     & {\bf Graph Features}  & {\bf Sel. Scaling}  & {\bf Loss} \\ \hline
 {\bf No Selections}  & N  & N   & 0.087 \\ \hline
@@ -249,9 +254,41 @@ Without features derived from the query graph and scaling based on the cost mode
 \subsubsection{Sensitivity Analysis}
 \textbf{TODO}
 
-\subsection{Runtime}
-\textbf{TODO}
+\subsection{Optimizer run times}
+We now report the optimizer run times of all algorithms across the entire 113 JOB queries.  Implementations are written in Java and reasonably optimized at the algorithmic level (e.g., QuickPick would short-circuit a partial plan if it's already estimated to be more costly than the current best plan), but no significant efforts are spent on low-level engineering (e.g., details such as bit twiddling tricks~\cite{vance1996rapid} or optimized JVM GC behavior).  Hence the relative magnitudes are more meaningful than the absolute values.
+
+Table~\ref{table:planning-latency} reports the run time statistics.  Experiments were performed on an Amazon EC2 c5.9xlarge server with a 3.0GHz Intel Xeon Platinum CPU and 72GB memory; implementations are single-threaded.  We observe that, for the 99\%-tile latency, \sys is able to achieve $1.2\times$---$7000\times$ speedup over the baselines, and for the median run time the speedup is 7$\times$ over exhaustive enumeration.
+
+\begin{table}[ht!]\centering \small
+\caption{\small{Planning latencies (milliseconds) on all 113 JOB queries. $p\langle num \rangle$ represents percentiles, e.g., p50 stands for the median run time. Calculated over 5 trials.}}\vspace{0.25em}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+    & {\bf p0}  & {\bf p50}  & {\bf p99}    & {\bf p100} \\ \hline
+{\bf QP}  & 3.17  & 17.28 & 135.37 & 157.25      \\ \hline
+{\bf KBZ} & \red{TODO}  & \red{TODO}  & \red{TODO}  & \red{TODO}         \\ \hline
+{\bf RD}  & 0.09 & 3.11 & 885.59 & 907.77         \\ \hline
+{\bf LD}  & 0.12  & 4.32   & 1216.03    & 1259.71          \\ \hline
+{\bf ZZ}  & 0.63  & 54.86   & 461,915.65    & 470,817.76         \\ \hline
+{\bf EX}  & 0.66  & 80.17   & 777,675.34    & 791,959.02         \\ \hline
+\hline
+{\bf DQ}  & 1.67  & 11.21  & 108.11    & 132.28 \\ \hline
+\end{tabular}
+\label{table:planning-latency}
+\end{table}
+
+
+Figure ~\ref{exp:planning-latency} groups the run times by number of relations in the query graphs.  The speedup there is even more drastic: for the largest joins \sys wins by up to 10,000$\times$.  The overheads of \sys on the small-join regime are mostly attributed to interfacing with dl4j (creating and filling the featurization buffers; JNI overheads due to native CPU backend execution).
+
+\zongheng{Decide whether to present Table~\ref{table:planning-latency} or Figure ~\ref{exp:planning-latency}.}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\columnwidth,keepaspectratio]{exp/planning-latency-grouped.pdf}
+    \caption{\small{Optimizer latency on all JOB queries, grouped by the number of relations in the query graph.  Error bars represent $\pm$ standard deviation around the mean.} \label{exp:planning-latency}}
+\end{figure}
+
 
 \subsection{Real Execution}
-\textbf{TODO}
+Now, we use our Apache Calcite connector to execute the learned plans on a real Postgres database.  
 
+\textbf{TODO}

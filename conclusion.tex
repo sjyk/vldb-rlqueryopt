@@ -11,6 +11,8 @@ This allows the algorithm to ``estimate'' the cost-to-go of subplans even if the
 Experimentally, we find that even with a modest number of training queries, this algorithm can match the performance of specialized heuristics.
 From a Software Engineering perspective, this unification allows the research community to develop a small number of optimized libraries  rather each domain designing/maintaining problem-specific heuristics.
 This work is a first step and there are a number of important directions for future work.
-\textbf{TODO}
+First, we would like to build a full featured optimizer in an existing database engine with a substantial learned component.
+Next, we will explore learning other aspects of query optimization such has subquery manipulation and rewriting.
+Finally, we want to extend the results to more complex algebras.
 
 

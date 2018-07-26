@@ -1,31 +1,41 @@
 \section{Optimizer Architecture}
-We call this new join optimization algorithm \sys, and describe how it fits into a query optimization stack. 
+We call this new join optimization algorithm \sys, and describe how it fits into a query optimization stack. \sys optimizes Select-Project-Join (SPJ) blocks of SQL queries.
 
-\subsection{API}
-\sys optimizes Select-Project-Join (SPJ) blocks of SQL queries. To plug \sys into a query optimizer here are the API hooks that we require implemented:
+\subsection{Architecture and API}
+First, we describe the information that \sys requires to train, learn, and execute.
+In this paper, we consider deployment on a fixed database.
+The algorithm has a training phase in which it observes join costs and an execution phase where it evaluates the learned model.
+In principle, one could consider a more adaptive setting where the model is periodically retrained. We will defer this discussion to future work.
+
+We envision that \sys fits into an existing optimizer stack as a replacement for the join optimization component.
+\sys makes relatively minimal assumptions about the structure of the optimizer. Below are the API hooks that we require implemented:
 
 \vspace{0.5em}
 \begin{lstlisting}
 sample(): List<Queries> 
 \end{lstlisting}
-\noindent A function that returns a list of training queries of interest.
+\noindent \emph{Workload Generation.} A function that returns a list of training queries of interest. \sys requires a relevant workload for training. In our experiments, we show that this workload can be taken from query templates or sampled from the database schema.
+
 
 \vspace{0.5em}
 \begin{lstlisting}
 train(query): List<Graph,Join,Graph',Cost> 
 \end{lstlisting}
-\noindent A function that given a query returns a list of join actions and their resultant costs. 
+\noindent \emph{Workload Generation.} A function that given a query returns a list of join actions and their resultant costs. \sys requires the system to have its own planner to generate training data. This means generating feasible join plans and their associated costs. Our experiments evaluate integration with both deterministic enumeration algorithms (bushy and left-deep) and a randomized algorithm called QuickPick-1000.
+
 
 \vspace{0.5em}
 \begin{lstlisting}
 selectivity(predicate): Double
 \end{lstlisting}
-\noindent A function that returns the reduction factor of a particular single table predicate.
+\noindent A function that returns the reduction factor of a particular single table predicate. \sys leverages the optimizer's own selectivity estimate for featurization. This captures the effects of single table selections on plan costs.
 
-\vspace{0.5em}
-Given these three functions, \sys can plug in to any system. It takes as input an SPJ block and outputs an optimized logical and physical join plan. 
-Our prototype implementation is built on Apache Calcite.
-The system connects to various database engines through a JDBC connector and has a internal simulator to model different physical design choices.
+\subsection{Implementation}
+Our prototype implementation is integrated with Apache Calcite~\cite{calcite}.
+Apache Calcite provides libraries for parsing SQL, representing relational algebraic expressions, and a Volcano-based query optimizer~\cite{graefe1991volcano}. Calcite does not handle physical execution or storage and uses JDBC connectors to a variety of database engines and file formats.
+We implemented a package inside Calcite that allowed us to leverage its parsing and plan representation, but also augment it with more sophisticated cost models and optimization algorithms.
+We implemented an internal simulator to simulate cost estimates based on histograms, true cardinalities, and other approximations.
+All of our code is written in single-threaded Java.
 
 \subsection{Architectural Implications}
 \textbf{TODO: Joe wanted to write something here}

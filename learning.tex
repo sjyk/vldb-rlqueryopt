@@ -58,10 +58,30 @@ During data collection noise can be injected into the planner to force it to enu
 The way that we implement this is to have a probabilistic parameter $\epsilon$ that randomizes the replacement policy in the memoization table.
 As the algorithm enumerates more subplans, if a particular relation set exists in the table it replaces the access path if the enumerated plan has a lower cost than one in the table and with $\textsf{rand()} > \epsilon$.
 
-
-\textbf{TODO: Algorithm block with data generation algorithm}
-
-
 \subsection{Execution after Training}
 After training, we will have a parametrized estimate of the Q-function, $Q_\theta(f_G,f_c)$. For execution, we simply go back to the standard algorithm as in the greedy method but instead of using the local costs, we use the learned Q-function: (1) start with the query graph, (2) featurize each contraction (2) find the contraction with the lowest \textbf{estimated Q-value}, (3) update the query graph and repeat.
 This algorithm has the time-complexity of greedy enumeration except in greedy the cost model is evaluated at each iteration, and in our method, a neural network is evaluated. Neural network evaluation can heavily leverage vectorization. In each iteration of the algorithm, we generate features corresponding to each contraction. Rather than evaluating the neural network on each, we can evaluate them on the entire batch. Modern architectures are designed to efficiently do such numerical computation and execution can be even faster leveraging specialized hardware like Graphics Processing Units and Tensor Processing Units.
+
+\subsection{Feedback From Execution}
+A learned Q-function also allows us to leverage feedback from real query executions.
+Readers might be familiar with the concept of fine-tuning in the neural network literature~\cite{yosinski2014transferable}, where a network is trained on one dataset and transferred to another with minimal retraining.
+We can apply a very similar principle to accounting for feedback.
+
+The Q-function relates subplans to future projected costs.
+As with any cost model, the cumulative cost is a proxy for runtime.
+We can define a new cost function where the immediate cost of all joins are 0 but the cost of the final plan is its runtime.
+We can generate a fine-tuning dataset $\{x_i\}_i^N$ with:
+\[
+x_i = \begin{cases}
+\texttt{(G, c, G', 0)} \text{ if not final},\\
+\texttt{(G, c, G',~runtime)} \text{ else}\\
+\end{cases}
+\]
+
+To train this model, we can pre-train the network on a large amount of samples from the optimizer's cost model. 
+These samples are inexpensive compared to execution.
+We train the model on these samples to convergence.
+Then, we freeze the weights of the first two layers, and re-initialize the last layer (also called the output layer).
+We retrain this layer with a small amount of execution data collected.
+
+One can think about the fine-tuning process as first using the cost model to learn relevant features about the structure suplans (i.e., which ones are generally beneficial). After this is learned, those features are fed into a predictor to project the effect of that decision on final runtime. 
